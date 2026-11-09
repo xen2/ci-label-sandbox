@@ -1,0 +1,28 @@
+name: changes
+
+# Sandbox stand-in for the path filter: an area is "changed" when `changed/<area>` exists at the PR head.
+
+on:
+  workflow_call:
+    outputs:
+      ios-tests:
+        value: ${{ jobs.detect.outputs.ios-tests }}
+      android:
+        value: ${{ jobs.detect.outputs.android }}
+
+permissions:
+  contents: read
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      ios-tests: ${{ steps.filter.outputs.ios-tests }}
+      android: ${{ steps.filter.outputs.android }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: filter
+        run: |
+          for area in ios-tests android; do
+            if [ -f "changed/$area" ]; then echo "$area=true"; else echo "$area=false"; fi >> "$GITHUB_OUTPUT"
+          done

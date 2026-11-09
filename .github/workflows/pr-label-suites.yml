@@ -1,0 +1,73 @@
+name: PR Label Suites
+
+# Sandbox copy of stride3d/stride's pr-label-suites.yml: same triggers, concurrency and `if:`
+# expressions; the suites are dummy-suite.yml with different lengths.
+
+on:
+  pull_request:
+    types: [reopened, synchronize, ready_for_review, labeled]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: pr-label-suites-${{ github.event.pull_request.number }}-${{ github.event.action == 'labeled' && github.event.label.name || 'push' }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    if: github.event.action != 'labeled' || startsWith(github.event.label.name, 'ci-')
+    uses: ./.github/workflows/changes.yml
+
+  enduser:
+    needs: changes
+    if: >
+      contains(github.event.pull_request.labels.*.name, 'ci-enduser')
+      && ((github.event.action == 'labeled' && github.event.label.name == 'ci-enduser')
+          || (github.event.action != 'labeled'
+              && (github.event.pull_request.draft != true || contains(github.event.pull_request.labels.*.name, 'ci-run-on-draft'))))
+    uses: ./.github/workflows/dummy-suite.yml
+    with:
+      suite: enduser
+      seconds: 40
+
+  editor:
+    needs: changes
+    if: >
+      contains(github.event.pull_request.labels.*.name, 'ci-editor')
+      && ((github.event.action == 'labeled' && github.event.label.name == 'ci-editor')
+          || (github.event.action != 'labeled'
+              && (github.event.pull_request.draft != true || contains(github.event.pull_request.labels.*.name, 'ci-run-on-draft'))))
+    uses: ./.github/workflows/dummy-suite.yml
+    with:
+      suite: editor
+      seconds: 120
+
+  ios:
+    needs: changes
+    if: >
+      contains(github.event.pull_request.labels.*.name, 'ci-ios')
+      && ((github.event.action == 'labeled' && github.event.label.name == 'ci-ios')
+          || (github.event.action != 'labeled'
+              && (github.event.pull_request.draft != true || contains(github.event.pull_request.labels.*.name, 'ci-run-on-draft'))))
+      && ((github.event.pull_request.draft == true && !contains(github.event.pull_request.labels.*.name, 'ci-run-on-draft'))
+          || needs.changes.outputs.ios-tests != 'true')
+    uses: ./.github/workflows/dummy-suite.yml
+    with:
+      suite: ios
+      seconds: 60
+
+  android:
+    needs: changes
+    if: >
+      contains(github.event.pull_request.labels.*.name, 'ci-android')
+      && ((github.event.action == 'labeled' && github.event.label.name == 'ci-android')
+          || (github.event.action != 'labeled'
+              && (github.event.pull_request.draft != true || contains(github.event.pull_request.labels.*.name, 'ci-run-on-draft'))))
+      && ((github.event.pull_request.draft == true && !contains(github.event.pull_request.labels.*.name, 'ci-run-on-draft'))
+          || needs.changes.outputs.android != 'true')
+    uses: ./.github/workflows/dummy-suite.yml
+    with:
+      suite: android
+      seconds: 30

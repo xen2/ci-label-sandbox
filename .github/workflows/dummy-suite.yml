@@ -1,0 +1,33 @@
+name: Dummy suite
+
+# Two jobs of `seconds` each; the test job fails when `fail/<suite>` exists at the PR head.
+
+on:
+  workflow_call:
+    inputs:
+      suite:
+        type: string
+        required: true
+      seconds:
+        type: number
+        default: 30
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build (${{ inputs.suite }})
+    runs-on: ubuntu-latest
+    steps:
+      - run: sleep ${{ inputs.seconds }}
+
+  test:
+    name: Test (${{ inputs.suite }})
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: |
+          sleep ${{ inputs.seconds }}
+          if [ -f "fail/${{ inputs.suite }}" ]; then echo "fail/${{ inputs.suite }} exists"; exit 1; fi
